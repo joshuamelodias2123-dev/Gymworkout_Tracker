@@ -6,3 +6,6 @@ Thumbs.db
 .env.local
 .vscode/
 .idea/
+
+# Machine-local Claude Code permission state
+.claude/settings.local.json
