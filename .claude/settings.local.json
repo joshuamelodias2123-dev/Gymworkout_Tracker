@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__bd7209c4-8bc5-4952-bb41-355cf1605ed0__execute_sql",
+      "mcp__bd7209c4-8bc5-4952-bb41-355cf1605ed0__get_advisors",
+      "mcp__bd7209c4-8bc5-4952-bb41-355cf1605ed0__apply_migration",
+      "PowerShell(git init -b main 2>&1)",
+      "PowerShell(git add -A)",
+      "PowerShell(\"--- files committed ---\")"
+    ]
+  }
+}

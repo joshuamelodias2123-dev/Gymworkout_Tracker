@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workout Tracker</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.min.js"></script>
+</head>
+<body>
+
+<!-- ============ AUTH SCREEN ============ -->
+<div id="auth-screen" class="hidden">
+  <div class="auth-card">
+    <h1>&#127947; Workout Tracker</h1>
+    <p class="sub" id="auth-subtitle">Sign in to reach your workouts from any device.</p>
+
+    <form id="auth-form">
+      <div class="field">
+        <label for="auth-email">Email</label>
+        <input type="email" id="auth-email" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="auth-password">Password</label>
+        <input type="password" id="auth-password" autocomplete="current-password" minlength="6" required>
+      </div>
+      <button class="btn" type="submit" id="auth-submit">Sign in</button>
+    </form>
+
+    <div class="auth-msg" id="auth-msg"></div>
+
+    <div class="auth-switch">
+      <span id="auth-switch-text">Don't have an account?</span>
+      <button type="button" class="muted-link" id="auth-switch-btn">Create one</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ LOADING ============ -->
+<div id="app-loading">Loading&hellip;</div>
+
+<!-- ============ APP ============ -->
+<div id="app" class="hidden">
+
+  <header>
+    <div class="header-top">
+      <div>
+        <h1>&#127947; Workout Tracker</h1>
+        <p>Your workouts are synced to your account &mdash; available on any device.</p>
+      </div>
+      <div class="account">
+        <span class="email" id="account-email"></span>
+        <button class="btn secondary small" id="btn-signout">Sign out</button>
+      </div>
+    </div>
+  </header>
+
+  <nav>
+    <button class="tab-btn active" data-view="log">Log Workout</button>
+    <button class="tab-btn" data-view="history">History</button>
+    <button class="tab-btn" data-view="progress">Progress</button>
+    <button class="tab-btn" data-view="exercises">Exercises &amp; Routines</button>
+    <button class="tab-btn" data-view="settings">Settings</button>
+  </nav>
+
+  <main>
+
+    <!-- LOG VIEW -->
+    <div class="view active" id="view-log">
+      <div class="card">
+        <h2>New Session</h2>
+        <div class="row">
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="log-date">
+          </div>
+          <div class="field">
+            <label>Start from routine (optional)</label>
+            <select id="log-routine-select">
+              <option value="">&mdash; none &mdash;</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" style="max-width:340px;">
+          <label>Add an exercise to this session</label>
+          <div class="row" style="align-items:flex-start;">
+            <select id="log-add-exercise" style="flex:1;min-width:180px;">
+              <option value="">Choose exercise&hellip;</option>
+            </select>
+            <button class="btn secondary small" id="btn-add-exercise-to-log">Add</button>
+          </div>
+        </div>
+        <div id="log-exercise-blocks"></div>
+        <div class="field">
+          <label>Session notes (optional)</label>
+          <textarea id="log-notes" rows="2" placeholder="How did it feel? Anything to remember next time?"></textarea>
+        </div>
+        <div class="toolbar" style="justify-content:flex-start;">
+          <button class="btn" id="btn-save-session">Save Session</button>
+          <button class="btn secondary" id="btn-clear-log">Clear</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div class="view" id="view-history">
+      <div class="card">
+        <h2>Session History</h2>
+        <div class="row">
+          <div class="field" style="flex:1;min-width:160px;">
+            <label>Filter by exercise</label>
+            <select id="history-filter-exercise">
+              <option value="">All exercises</option>
+            </select>
+          </div>
+        </div>
+        <div id="history-list"></div>
+      </div>
+    </div>
+
+    <!-- PROGRESS VIEW -->
+    <div class="view" id="view-progress">
+      <div class="card">
+        <h2>Progress</h2>
+        <div class="field" style="max-width:320px;">
+          <label>Exercise</label>
+          <select id="progress-exercise-select"></select>
+        </div>
+        <div id="progress-content"></div>
+      </div>
+    </div>
+
+    <!-- EXERCISES & ROUTINES VIEW -->
+    <div class="view" id="view-exercises">
+      <div class="card">
+        <h2>Exercises</h2>
+        <div class="row">
+          <div class="field">
+            <label>Name</label>
+            <input type="text" id="new-exercise-name" placeholder="e.g. Barbell Bench Press">
+          </div>
+          <div class="field">
+            <label>Category</label>
+            <select id="new-exercise-category">
+              <option>Chest</option>
+              <option>Back</option>
+              <option>Legs</option>
+              <option>Shoulders</option>
+              <option>Arms</option>
+              <option>Core</option>
+              <option>Cardio</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field" style="justify-content:flex-end;">
+            <button class="btn" id="btn-add-exercise">Add Exercise</button>
+          </div>
+        </div>
+        <div id="exercise-list"></div>
+      </div>
+
+      <div class="card">
+        <h2>Routines <span style="font-weight:400;color:var(--text-dim);font-size:12px;">(reusable workout templates, optional)</span></h2>
+        <div class="row">
+          <div class="field" style="flex:1;min-width:160px;">
+            <label>Routine name</label>
+            <input type="text" id="new-routine-name" placeholder="e.g. Push Day">
+          </div>
+          <div class="field" style="flex:2;min-width:220px;">
+            <label>Exercises in this routine</label>
+            <select id="new-routine-exercises" multiple></select>
+          </div>
+          <div class="field" style="justify-content:flex-end;">
+            <button class="btn" id="btn-add-routine">Save Routine</button>
+          </div>
+        </div>
+        <div id="routine-list"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS VIEW -->
+    <div class="view" id="view-settings">
+      <div class="card">
+        <h2>Backup &amp; Restore</h2>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:0;">
+          Your data is stored in your Supabase account, so it survives clearing your browser.
+          Exporting a backup is still useful if you want an offline copy or want to move accounts.
+        </p>
+        <div class="toolbar" style="justify-content:flex-start;">
+          <button class="btn secondary" id="btn-export">Export backup (.json)</button>
+          <button class="btn secondary" id="btn-import-trigger">Import backup</button>
+          <input type="file" id="import-file" accept="application/json" style="display:none;">
+        </div>
+      </div>
+      <div class="card">
+        <h2>Danger Zone</h2>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:0;">
+          This erases every exercise, routine, and session on your account &mdash; on all your devices.
+        </p>
+        <button class="btn danger" id="btn-reset-all">Erase all data</button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
