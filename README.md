@@ -121,15 +121,15 @@ a connection the first time.
 
 Email + password, via Supabase Auth.
 
-**Email confirmation is currently ON** for this project, so a new signup must
-click a link in their inbox before they can sign in. Two things to know:
+**Email confirmation is OFF**, so signup logs you straight in and no mail is
+sent. That is the right setting for a personal, single-user app, and it sidesteps
+Supabase's built-in sender — which allows only ~2 messages per hour and returns
+`429: over_email_send_rate_limit` once you exceed it.
 
-1. Supabase's built-in email sender is heavily rate limited and really only
-   intended for testing. For real use, configure your own SMTP provider under
-   **Authentication → Emails**.
-2. If this is a personal, single-user app, it's simpler to turn confirmation off:
-   **Authentication → Sign In / Providers → Email → Confirm email → off**.
-   Signup then logs you straight in.
+If you ever open this up to other people, turn confirmation back on
+(**Authentication → Sign In / Providers → Email → Confirm email**) *and* configure
+your own SMTP provider under **Authentication → Emails**. The built-in sender is
+for testing only and will not survive real signups.
 
 Supabase also flags that **leaked password protection** is disabled. Turning it
 on checks new passwords against HaveIBeenPwned.
