@@ -131,6 +131,7 @@ button.btn{
   font-weight:600;
   font-family:inherit;
   cursor:pointer;
+  white-space:nowrap; /* pill buttons should never wrap their label */
   transition:transform .1s, opacity .15s;
 }
 button.btn:active{transform:scale(.97);}
@@ -400,7 +401,7 @@ button.icon-btn:hover{color:var(--accent);background:var(--accent-soft);}
 .stat-box .value.amber{color:var(--amber);}
 canvas{max-width:100%;}
 
-.toolbar{display:flex;gap:8px;margin-bottom:10px;}
+.toolbar{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
 
 /* ---------- bottom nav ---------- */
 nav{
