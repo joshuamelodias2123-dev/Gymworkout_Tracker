@@ -67,6 +67,119 @@
     var d = new Date(iso + "T00:00:00");
     return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
   }
+  function fmtLong(iso) {
+    var d = new Date(iso + "T00:00:00");
+    return d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
+  }
+
+  // Local-date ISO string. Deliberately not toISOString(), which converts to UTC
+  // and can hand back yesterday for anyone west of Greenwich.
+  function isoOf(d) {
+    return d.getFullYear() + "-" +
+      String(d.getMonth() + 1).padStart(2, "0") + "-" +
+      String(d.getDate()).padStart(2, "0");
+  }
+  function parseISO(iso) { return new Date(iso + "T00:00:00"); }
+  function addDays(d, n) {
+    var c = new Date(d.getTime());
+    c.setDate(c.getDate() + n);
+    return c;
+  }
+  function startOfWeek(d) {
+    var c = new Date(d.getTime());
+    var dow = (c.getDay() + 6) % 7; // Monday = 0
+    return addDays(c, -dow);
+  }
+
+  // =====================================================
+  // WEEK STRIP
+  // =====================================================
+  var selectedDate = isoOf(new Date());
+  var weekAnchor = startOfWeek(new Date());
+
+  var DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+  function setSelectedDate(iso) {
+    selectedDate = iso;
+    weekAnchor = startOfWeek(parseISO(iso));
+    renderWeekStrip();
+  }
+
+  function renderWeekStrip() {
+    var today = isoOf(new Date());
+    var logged = {};
+    state.sessions.forEach(function (s) { logged[s.date] = true; });
+
+    var html = "";
+    for (var i = 0; i < 7; i++) {
+      var d = addDays(weekAnchor, i);
+      var iso = isoOf(d);
+      var cls = "week-day";
+      if (iso === selectedDate) cls += " selected";
+      if (iso === today) cls += " today";
+      if (logged[iso]) cls += " has-session";
+      html += '<button class="' + cls + '" data-date="' + iso + '">' +
+        '<span class="dow">' + DOW[i] + "</span>" +
+        '<span class="num">' + d.getDate() + "</span>" +
+        "</button>";
+    }
+    $("week-days").innerHTML = html;
+    $("week-days").querySelectorAll("[data-date]").forEach(function (b) {
+      b.addEventListener("click", function () { setSelectedDate(b.getAttribute("data-date")); });
+    });
+
+    $("log-date").value = selectedDate;
+    $("log-date-label").textContent = fmtLong(selectedDate);
+  }
+
+  $("week-prev").addEventListener("click", function () {
+    weekAnchor = addDays(weekAnchor, -7);
+    renderWeekStrip();
+  });
+  $("week-next").addEventListener("click", function () {
+    weekAnchor = addDays(weekAnchor, 7);
+    renderWeekStrip();
+  });
+  $("log-date").addEventListener("change", function () {
+    if (this.value) setSelectedDate(this.value);
+  });
+
+  // Draws a rounded progress arc on a canvas.
+  //
+  // The logical size lives in data-size, NOT in canvas.width. Reading back the
+  // mutated width each redraw compounds the devicePixelRatio scale and the ring
+  // grows on every render.
+  function drawRing(canvas, pct, color) {
+    var size = Number(canvas.getAttribute("data-size"));
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr;
+    canvas.height = size * dpr;
+
+    var ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+
+    var lw = 12;
+    var r = size / 2 - lw / 2 - 2;
+    var cx = size / 2, cy = size / 2;
+    var start = -Math.PI / 2;
+
+    ctx.lineWidth = lw;
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "#232733";
+    ctx.stroke();
+
+    var frac = Math.max(0, Math.min(1, pct));
+    if (frac > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r, start, start + Math.PI * 2 * frac);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+    }
+  }
 
   // =====================================================
   // AUTH
@@ -239,7 +352,7 @@
       setAuthMsg("Couldn't load your data: " + (err.message || err), "error");
       return;
     }
-    $("log-date").valueAsDate = new Date();
+    setSelectedDate(isoOf(new Date()));
     refreshLogDropdowns();
     renderLogBlocks();
     renderExerciseList();
@@ -554,7 +667,7 @@
 
   $("btn-save-session").addEventListener("click", async function () {
     var btn = this;
-    var date = $("log-date").value;
+    var date = selectedDate;
     if (!date) { toast("Pick a date"); return; }
     if (logEntries.length === 0) { toast("Add at least one exercise"); return; }
 
@@ -582,12 +695,13 @@
       $("log-notes").value = "";
       $("log-routine-select").value = "";
       renderLogBlocks();
+      renderWeekStrip(); // the saved day now gets a coral ring
       toast("Session saved ✓");
     } catch (e) {
       /* handled */
     } finally {
       btn.disabled = false;
-      btn.textContent = "Save Session";
+      btn.textContent = "Save session";
     }
   });
 
@@ -676,6 +790,7 @@
           check(await sb.from("sessions").delete().eq("id", id), "delete session");
           state.sessions = state.sessions.filter(function (s) { return s.id !== id; });
           renderHistory();
+          renderWeekStrip();
           toast("Session deleted");
         } catch (err) { /* handled */ }
       });
@@ -718,20 +833,47 @@
     var bestVolume = Math.max.apply(null, points.map(function (p) { return p.volume; }));
     var bestReps = Math.max.apply(null, points.map(function (p) { return p.maxReps; }));
 
+    var latest = points[points.length - 1];
+    var pct = function (a, b) { return b > 0 ? a / b : 0; };
+    var bar = function (label, value, best, cls) {
+      var w = Math.round(pct(value, best) * 100);
+      return '<div class="legend-row">' +
+        '<div class="top"><span class="k">' + label + '</span><span class="v">' + value + " / " + best + "</span></div>" +
+        '<span class="track"><span class="fill ' + cls + '" style="width:' + w + '%"></span></span>' +
+        "</div>";
+    };
+
     content.innerHTML =
+      '<div class="ring-card">' +
+        '<div class="ring-wrap">' +
+          '<canvas id="ring-canvas" data-size="168"></canvas>' +
+          '<div class="ring-center">' +
+            '<div class="num">' + latest.topWeight + "</div>" +
+            '<div class="unit">latest top set</div>' +
+          "</div>" +
+        "</div>" +
+        '<div class="ring-legend">' +
+          bar("Top set", latest.topWeight, bestWeight, "accent") +
+          bar("Volume", Math.round(latest.volume), Math.round(bestVolume), "teal") +
+          bar("Best reps", latest.maxReps, bestReps, "purple") +
+        "</div>" +
+      "</div>" +
       '<div class="stat-grid">' +
         '<div class="stat-box"><div class="label">Best top-set weight</div><div class="value accent">' + bestWeight + "</div></div>" +
-        '<div class="stat-box"><div class="label">Best session volume</div><div class="value">' + Math.round(bestVolume) + "</div></div>" +
-        '<div class="stat-box"><div class="label">Best reps (single set)</div><div class="value">' + bestReps + "</div></div>" +
+        '<div class="stat-box"><div class="label">Best session volume</div><div class="value teal">' + Math.round(bestVolume) + "</div></div>" +
+        '<div class="stat-box"><div class="label">Best reps (single set)</div><div class="value amber">' + bestReps + "</div></div>" +
         '<div class="stat-box"><div class="label">Sessions logged</div><div class="value">' + points.length + "</div></div>" +
-      "</div>";
+      "</div>" +
+      // Built in the same pass as the ring: an `innerHTML +=` here would re-parse
+      // the subtree and hand back a blank canvas, wiping whatever we'd painted.
+      (typeof Chart === "undefined"
+        ? '<div class="empty-state">Chart library couldn\'t load (needs an internet connection). Your stats above are still accurate &mdash; the chart will appear once you\'re back online.</div>'
+        : '<canvas id="progress-canvas" height="220"></canvas>');
 
-    if (typeof Chart === "undefined") {
-      content.innerHTML += '<div class="empty-state">Chart library couldn\'t load (needs an internet connection). Your stats above are still accurate &mdash; the chart will appear once you\'re back online.</div>';
-      return;
-    }
+    // Ring shows the latest top set as a fraction of the all-time best, so a PR fills it.
+    drawRing($("ring-canvas"), pct(latest.topWeight, bestWeight), "#FF4D5E");
 
-    content.innerHTML += '<canvas id="progress-canvas" height="220"></canvas>';
+    if (typeof Chart === "undefined") return;
 
     var ctx = $("progress-canvas").getContext("2d");
     if (progressChart) progressChart.destroy();
@@ -743,18 +885,22 @@
           {
             label: "Top set weight",
             data: points.map(function (p) { return p.topWeight; }),
-            borderColor: "#4f8cff",
-            backgroundColor: "rgba(79,140,255,0.15)",
-            tension: 0.25,
+            borderColor: "#FF4D5E",
+            backgroundColor: "rgba(255,77,94,0.14)",
+            pointBackgroundColor: "#FF4D5E",
+            pointRadius: 3,
+            tension: 0.3,
             yAxisID: "y",
             fill: true,
           },
           {
             label: "Session volume",
             data: points.map(function (p) { return p.volume; }),
-            borderColor: "#5ee6b0",
-            backgroundColor: "rgba(94,230,176,0.1)",
-            tension: 0.25,
+            borderColor: "#4FD6C0",
+            backgroundColor: "rgba(79,214,192,0.1)",
+            pointBackgroundColor: "#4FD6C0",
+            pointRadius: 3,
+            tension: 0.3,
             yAxisID: "y1",
             fill: false,
           },
@@ -763,11 +909,11 @@
       options: {
         responsive: true,
         interaction: { mode: "index", intersect: false },
-        plugins: { legend: { labels: { color: "#e8e9ec" } } },
+        plugins: { legend: { labels: { color: "#F2F3F5", usePointStyle: true, boxWidth: 6 } } },
         scales: {
-          x: { ticks: { color: "#9aa0ac" }, grid: { color: "#2a2f3a" } },
-          y: { position: "left", ticks: { color: "#9aa0ac" }, grid: { color: "#2a2f3a" }, title: { display: true, text: "Weight", color: "#9aa0ac" } },
-          y1: { position: "right", ticks: { color: "#9aa0ac" }, grid: { display: false }, title: { display: true, text: "Volume", color: "#9aa0ac" } },
+          x: { ticks: { color: "#8B92A0" }, grid: { color: "#262A34" } },
+          y: { position: "left", ticks: { color: "#8B92A0" }, grid: { color: "#262A34" }, title: { display: true, text: "Weight", color: "#8B92A0" } },
+          y1: { position: "right", ticks: { color: "#8B92A0" }, grid: { display: false }, title: { display: true, text: "Volume", color: "#8B92A0" } },
         },
       },
     });
@@ -813,6 +959,7 @@
         await importBackup(parsed);
         await loadAll();
         refreshLogDropdowns();
+        renderWeekStrip();
         renderExerciseList();
         renderRoutineList();
         renderHistory();
@@ -897,6 +1044,7 @@
       state = { exercises: [], routines: [], sessions: [] };
       logEntries = [];
       refreshLogDropdowns();
+      renderWeekStrip();
       renderExerciseList();
       renderRoutineList();
       renderHistory();

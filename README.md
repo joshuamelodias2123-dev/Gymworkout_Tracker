@@ -1,30 +1,67 @@
-# 🏋 Workout Tracker
+# Pulseline
 
-A small, dependency-light workout logger. Log sessions, build reusable routines,
-and chart your progress over time. Data is stored in **Supabase** behind
-per-user Row Level Security, so your workouts follow you across devices.
+*your progress, in rhythm*
+
+A workout logger. Log sessions, build reusable routines, and chart your progress
+over time. Data is stored in **Supabase** behind per-user Row Level Security, so
+your workouts follow you across devices.
 
 Plain HTML, CSS, and vanilla JS — no build step, no framework, no bundler.
 
 ## Features
 
-- **Log Workout** — pick a date, add exercises, record weight × reps per set. Shows what you lifted last time for the same exercise.
-- **History** — collapsible session list, filterable by exercise.
-- **Progress** — top-set weight and session volume charted over time, plus personal bests.
-- **Exercises & Routines** — manage your exercise library and save reusable workout templates.
-- **Settings** — export a JSON backup, import one back, or erase everything.
+- **Log** — a week strip for picking the session date (days with a logged workout get a coral ring), optional routine, then weight × reps per set. Shows what you lifted last time for the same exercise.
+- **History** — collapsible past sessions, filterable by exercise.
+- **Progress** — a ring showing your latest top set as a fraction of your all-time best, macro-style bars, personal-best tiles, and a dual-axis weight/volume chart.
+- **Library** — manage your exercise catalogue and reusable routines.
+- **Account** — export a JSON backup, import one back, or erase everything.
 
 ## Running it
 
-There's no build step. Any static file server works:
+No build step. Any static file server works:
 
 ```bash
 npx --yes http-server . -p 4173 -c-1
 # then open http://localhost:4173
 ```
 
-Opening `index.html` directly off the filesystem (`file://`) also mostly works,
-but a local server is recommended so Supabase auth redirects behave normally.
+## Brand
+
+| Token | Value | Used for |
+| --- | --- | --- |
+| bg | `#0B0C10` | page background |
+| panel / panel-2 / panel-3 | `#15171E` / `#1B1E27` / `#232733` | cards, inputs, ring track |
+| border | `#262A34` | hairlines |
+| text / dim | `#F2F3F5` / `#8B92A0` | copy |
+| accent | `#FF4D5E` | coral — primary actions, top-set ring |
+| teal | `#4FD6C0` | volume |
+| amber | `#FFB454` | reps |
+| purple | `#8B7CFF` | tertiary bars |
+
+Wordmark is Poppins, falling back to the system sans.
+
+### The logo
+
+A tapered heartbeat line that fades to a point at both ends: small blip → tall
+spike → deep valley → small blip. A plain SVG stroke has one uniform width and
+cannot taper, so `brand/pulse.py` treats the mark as a *centerline* of
+`(x, y, half_width)` key points, smooths it with a Catmull-Rom spline, offsets
+each sample along its normal, and emits a single filled outline path.
+
+```bash
+python brand/pulse.py
+```
+
+Edit `KEY` in that script and re-run to reshape the mark. It writes:
+
+| File | Purpose |
+| --- | --- |
+| `pulse_path.txt` | full-density path, for large renders |
+| `pulse_path_compact.txt` | decimated path, ~3.5× smaller |
+| `pulseline-mark.svg` | the coral mark used in the header, auth screen, and favicon |
+
+`brand/preview.html` renders the mark at three sizes against the app background —
+handy when tweaking `KEY`.
 
 ## Configuration
 
@@ -64,31 +101,54 @@ from every dropdown but your past sessions still render its name. Re-adding an
 exercise with the same name un-archives the original row rather than colliding
 with the unique index on `(user_id, lower(name))`.
 
+## Rendering notes
+
+Two traps worth not re-introducing:
+
+- **The progress ring is drawn on a raw Canvas 2D context**, and its logical size
+  lives in a `data-size` attribute. Reading back the mutated `canvas.width` on
+  each redraw would compound the `devicePixelRatio` scale and the ring would grow
+  every render.
+- **Build the ring and the chart canvas in one `innerHTML` assignment.** An
+  `innerHTML +=` re-parses the whole subtree and replaces the canvas you already
+  painted with a blank one.
+
+Only the line chart uses Chart.js from a CDN, and it degrades gracefully: if the
+CDN is unreachable the stats still render with a note explaining the chart needs
+a connection the first time.
+
 ## Auth
 
 Email + password, via Supabase Auth.
 
-**Email confirmation is currently ON** for this project, which means a new signup
-must click a link in their inbox before they can sign in. Two things to know:
+**Email confirmation is currently ON** for this project, so a new signup must
+click a link in their inbox before they can sign in. Two things to know:
 
-1. Supabase's built-in email sender is heavily rate limited and is really only
+1. Supabase's built-in email sender is heavily rate limited and really only
    intended for testing. For real use, configure your own SMTP provider under
-   **Authentication → Emails** in the dashboard.
+   **Authentication → Emails**.
 2. If this is a personal, single-user app, it's simpler to turn confirmation off:
    **Authentication → Sign In / Providers → Email → Confirm email → off**.
    Signup then logs you straight in.
 
 Supabase also flags that **leaked password protection** is disabled. Turning it
-on (Authentication → Policies) checks new passwords against HaveIBeenPwned.
+on checks new passwords against HaveIBeenPwned.
 
 ## Files
 
 | File | Purpose |
 | --- | --- |
-| `index.html` | Markup: auth screen + the five app tabs |
-| `styles.css` | All styling, dark theme |
-| `app.js` | Auth, data loading, rendering, and every Supabase write |
+| `index.html` | Auth screen, five tabs, bottom nav |
+| `styles.css` | All styling |
+| `app.js` | Auth, data loading, rendering, every Supabase write |
 | `config.js` | Supabase URL + publishable key |
+| `brand/` | Logo generator, generated paths, mark preview |
 
-`app.js` keeps an in-memory mirror of your rows in `state`, loaded once on sign-in
-and patched on each write, so rendering stays synchronous and snappy.
+`app.js` keeps an in-memory mirror of your rows in `state`, loaded once on
+sign-in and patched on each write, so rendering stays synchronous.
+
+## Not built
+
+Nutrition tracking, a calendar month view, and a gyms/map tab are **not** part of
+this app. A live gym map would need a maps API key. Both would be real features,
+not styling.

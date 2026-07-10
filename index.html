@@ -2,8 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Workout Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0B0C10">
+<title>Pulseline</title>
+<link rel="icon" href="brand/pulseline-mark.svg">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.min.js"></script>
@@ -13,7 +17,10 @@
 <!-- ============ AUTH SCREEN ============ -->
 <div id="auth-screen" class="hidden">
   <div class="auth-card">
-    <h1>&#127947; Workout Tracker</h1>
+    <div class="auth-brand">
+      <img src="brand/pulseline-mark.svg" alt="">
+      <div class="name">Pulseline</div>
+    </div>
     <p class="sub" id="auth-subtitle">Sign in to reach your workouts from any device.</p>
 
     <form id="auth-form">
@@ -44,10 +51,13 @@
 <div id="app" class="hidden">
 
   <header>
-    <div class="header-top">
-      <div>
-        <h1>&#127947; Workout Tracker</h1>
-        <p>Your workouts are synced to your account &mdash; available on any device.</p>
+    <div class="header-inner">
+      <div class="brand">
+        <img src="brand/pulseline-mark.svg" alt="">
+        <div>
+          <div class="name">Pulseline</div>
+          <div class="tag">your progress, in rhythm</div>
+        </div>
       </div>
       <div class="account">
         <span class="email" id="account-email"></span>
@@ -56,48 +66,57 @@
     </div>
   </header>
 
-  <nav>
-    <button class="tab-btn active" data-view="log">Log Workout</button>
-    <button class="tab-btn" data-view="history">History</button>
-    <button class="tab-btn" data-view="progress">Progress</button>
-    <button class="tab-btn" data-view="exercises">Exercises &amp; Routines</button>
-    <button class="tab-btn" data-view="settings">Settings</button>
-  </nav>
-
   <main>
 
     <!-- LOG VIEW -->
     <div class="view active" id="view-log">
+      <h1 class="view-title">Log workout</h1>
+
+      <div class="week-strip">
+        <button class="week-nav" id="week-prev" aria-label="Previous week">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+        </button>
+        <div class="week-days" id="week-days"></div>
+        <button class="week-nav" id="week-next" aria-label="Next week">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>
+        </button>
+      </div>
+
       <div class="card">
-        <h2>New Session</h2>
-        <div class="row">
-          <div class="field">
-            <label>Date</label>
-            <input type="date" id="log-date">
+        <div class="date-caption">
+          <div>
+            <div class="label">Session date</div>
+            <div class="value" id="log-date-label"></div>
           </div>
-          <div class="field">
-            <label>Start from routine (optional)</label>
-            <select id="log-routine-select">
-              <option value="">&mdash; none &mdash;</option>
-            </select>
-          </div>
+          <input type="date" id="log-date" aria-label="Pick another date">
         </div>
-        <div class="field" style="max-width:340px;">
+
+        <div class="field">
+          <label>Start from routine (optional)</label>
+          <select id="log-routine-select">
+            <option value="">&mdash; none &mdash;</option>
+          </select>
+        </div>
+
+        <div class="field">
           <label>Add an exercise to this session</label>
-          <div class="row" style="align-items:flex-start;">
-            <select id="log-add-exercise" style="flex:1;min-width:180px;">
+          <div class="row" style="align-items:center;">
+            <select id="log-add-exercise" style="flex:1;min-width:170px;">
               <option value="">Choose exercise&hellip;</option>
             </select>
             <button class="btn secondary small" id="btn-add-exercise-to-log">Add</button>
           </div>
         </div>
+
         <div id="log-exercise-blocks"></div>
+
         <div class="field">
           <label>Session notes (optional)</label>
           <textarea id="log-notes" rows="2" placeholder="How did it feel? Anything to remember next time?"></textarea>
         </div>
-        <div class="toolbar" style="justify-content:flex-start;">
-          <button class="btn" id="btn-save-session">Save Session</button>
+
+        <div class="toolbar">
+          <button class="btn" id="btn-save-session">Save session</button>
           <button class="btn secondary" id="btn-clear-log">Clear</button>
         </div>
       </div>
@@ -105,15 +124,13 @@
 
     <!-- HISTORY VIEW -->
     <div class="view" id="view-history">
+      <h1 class="view-title">History</h1>
       <div class="card">
-        <h2>Session History</h2>
-        <div class="row">
-          <div class="field" style="flex:1;min-width:160px;">
-            <label>Filter by exercise</label>
-            <select id="history-filter-exercise">
-              <option value="">All exercises</option>
-            </select>
-          </div>
+        <div class="field">
+          <label>Filter by exercise</label>
+          <select id="history-filter-exercise">
+            <option value="">All exercises</option>
+          </select>
         </div>
         <div id="history-list"></div>
       </div>
@@ -121,9 +138,9 @@
 
     <!-- PROGRESS VIEW -->
     <div class="view" id="view-progress">
+      <h1 class="view-title">Progress</h1>
       <div class="card">
-        <h2>Progress</h2>
-        <div class="field" style="max-width:320px;">
+        <div class="field">
           <label>Exercise</label>
           <select id="progress-exercise-select"></select>
         </div>
@@ -133,10 +150,12 @@
 
     <!-- EXERCISES & ROUTINES VIEW -->
     <div class="view" id="view-exercises">
+      <h1 class="view-title">Library</h1>
+
       <div class="card">
         <h2>Exercises</h2>
         <div class="row">
-          <div class="field">
+          <div class="field" style="flex:1;min-width:150px;">
             <label>Name</label>
             <input type="text" id="new-exercise-name" placeholder="e.g. Barbell Bench Press">
           </div>
@@ -154,25 +173,26 @@
             </select>
           </div>
           <div class="field" style="justify-content:flex-end;">
-            <button class="btn" id="btn-add-exercise">Add Exercise</button>
+            <button class="btn" id="btn-add-exercise">Add</button>
           </div>
         </div>
         <div id="exercise-list"></div>
       </div>
 
       <div class="card">
-        <h2>Routines <span style="font-weight:400;color:var(--text-dim);font-size:12px;">(reusable workout templates, optional)</span></h2>
+        <h2>Routines</h2>
+        <p style="color:var(--text-dim);font-size:12.5px;margin:-6px 0 14px;">Reusable workout templates. Optional.</p>
         <div class="row">
-          <div class="field" style="flex:1;min-width:160px;">
+          <div class="field" style="flex:1;min-width:150px;">
             <label>Routine name</label>
             <input type="text" id="new-routine-name" placeholder="e.g. Push Day">
           </div>
-          <div class="field" style="flex:2;min-width:220px;">
+          <div class="field" style="flex:2;min-width:200px;">
             <label>Exercises in this routine</label>
             <select id="new-routine-exercises" multiple></select>
           </div>
           <div class="field" style="justify-content:flex-end;">
-            <button class="btn" id="btn-add-routine">Save Routine</button>
+            <button class="btn" id="btn-add-routine">Save</button>
           </div>
         </div>
         <div id="routine-list"></div>
@@ -181,28 +201,58 @@
 
     <!-- SETTINGS VIEW -->
     <div class="view" id="view-settings">
+      <h1 class="view-title">Account</h1>
+
       <div class="card">
-        <h2>Backup &amp; Restore</h2>
-        <p style="color:var(--text-dim);font-size:13px;margin-top:0;">
-          Your data is stored in your Supabase account, so it survives clearing your browser.
-          Exporting a backup is still useful if you want an offline copy or want to move accounts.
+        <h2>Backup &amp; restore</h2>
+        <p style="color:var(--text-dim);font-size:12.5px;margin:-6px 0 14px;">
+          Your data lives in your Pulseline account, so it survives clearing your browser.
+          Export a copy if you want it offline or want to move accounts.
         </p>
-        <div class="toolbar" style="justify-content:flex-start;">
-          <button class="btn secondary" id="btn-export">Export backup (.json)</button>
+        <div class="toolbar">
+          <button class="btn secondary" id="btn-export">Export backup</button>
           <button class="btn secondary" id="btn-import-trigger">Import backup</button>
           <input type="file" id="import-file" accept="application/json" style="display:none;">
         </div>
       </div>
+
       <div class="card">
-        <h2>Danger Zone</h2>
-        <p style="color:var(--text-dim);font-size:13px;margin-top:0;">
-          This erases every exercise, routine, and session on your account &mdash; on all your devices.
+        <h2>Danger zone</h2>
+        <p style="color:var(--text-dim);font-size:12.5px;margin:-6px 0 14px;">
+          Erases every exercise, routine, and session on your account &mdash; on all your devices.
         </p>
         <button class="btn danger" id="btn-reset-all">Erase all data</button>
       </div>
+
+      <div class="footer-tag">Pulseline &middot; your progress, in rhythm</div>
     </div>
 
   </main>
+
+  <nav>
+    <div class="nav-inner">
+      <button class="tab-btn active" data-view="log">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        <span>Log</span>
+      </button>
+      <button class="tab-btn" data-view="history">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>
+        <span>History</span>
+      </button>
+      <button class="tab-btn" data-view="progress">
+        <svg viewBox="0 0 24 24"><path d="M3 17l5-6 4 4 5-8"/><path d="M3 21h18"/></svg>
+        <span>Progress</span>
+      </button>
+      <button class="tab-btn" data-view="exercises">
+        <svg viewBox="0 0 24 24"><path d="M4 9v6M8 7v10M16 7v10M20 9v6M8 12h8"/></svg>
+        <span>Library</span>
+      </button>
+      <button class="tab-btn" data-view="settings">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.6 7.6 0 0115 0"/></svg>
+        <span>Account</span>
+      </button>
+    </div>
+  </nav>
 </div>
 
 <div class="toast" id="toast"></div>

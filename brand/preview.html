@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><title>mark preview</title>
+<style>
+body{background:#0B0C10;margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;gap:40px;font-family:system-ui;}
+.big{width:600px}
+.small{width:160px}
+.tiny{width:48px}
+svg{display:block}
+.label{color:#8B92A0;font-size:12px}
+</style></head>
+<body>
+  <div class="big" id="a"></div>
+  <div class="small" id="b"></div>
+  <div class="tiny" id="c"></div>
+  <div class="label" id="err"></div>
+<script>
+fetch('pulse_path_compact.txt').then(r=>r.text()).then(d=>{
+  const svg = p => `<svg viewBox="0 0 600 300" xmlns="http://www.w3.org/2000/svg"><path d="${p}" fill="#FF4D5E"/></svg>`;
+  a.innerHTML = svg(d); b.innerHTML = svg(d); c.innerHTML = svg(d);
+}).catch(e => err.textContent = e.message);
+</script>
+</body></html>
